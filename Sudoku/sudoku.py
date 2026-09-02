@@ -21,8 +21,23 @@ BTN_ACTIVE   = "#b6a0e8"
 PAD_BG       = "#fdeef5"
 PAD_ACTIVE   = "#f8d8e8"
 
-DIFFICULTY = {"Easy": 42, "Medium": 34, "Hard": 28}   # number of clues
-
+DIFFICULTY = {
+    "Easy": {
+        "clues": 42,
+        "lives": 6,
+        "hints": 2
+    },
+    "Medium": {
+        "clues": 34,
+        "lives": 4,
+        "hints": 4
+    },
+    "Hard": {
+        "clues": 28,
+        "lives": 3,
+        "hints": 5
+    }
+}
 
 
 def is_valid(grid, r, c, n):
@@ -112,6 +127,8 @@ class CuteSudoku:
         self.notes_mode = False
         self.selected = (0, 0)
         self.mistakes = 0
+        self.lives = 6
+        self.hints = 2
         self.seconds = 0
         self.timer_running = False
         self.won = False
@@ -144,6 +161,14 @@ class CuteSudoku:
         self.mist_lbl = tk.Label(info, text="\u2716 0", font=self.info_font,
                                  bg=PINK_BG, fg=USER_TXT)
         self.mist_lbl.pack(side="left", padx=14)
+
+        self.lives_lbl = tk.Label(info, text="❤️ 6", font=self.info_font, bg=PINK_BG, fg=USER_TXT)
+        self.lives_lbl.pack(side="left", padx=14)
+
+        self.hints_lbl = tk.Label(info, text="✨ 2", font=self.info_font,
+                                 bg=PINK_BG, fg=DARK_PURPLE)
+
+        self.hints_lbl.pack(side="left", padx=14)
 
         self.diff_var = tk.StringVar(value="Easy")
         diff = tk.OptionMenu(info, self.diff_var, *DIFFICULTY.keys(),
@@ -187,7 +212,6 @@ class CuteSudoku:
         self.notes_btn.grid(row=0, column=0, padx=4)
         mkbtn("\u232b Erase", lambda: self.enter_number(0)).grid(row=0, column=1, padx=4)
         mkbtn("\u2728 Hint", self.hint).grid(row=0, column=2, padx=4)
-        mkbtn("\u2713 Check", self.check).grid(row=0, column=3, padx=4)
         mkbtn("\u21bb New", lambda: self.new_game(self.diff_var.get())).grid(
             row=0, column=4, padx=4)
 
@@ -204,15 +228,25 @@ class CuteSudoku:
 
     def new_game(self, difficulty):
         self.diff_var.set(difficulty)
-        self.puzzle, self.solution = make_puzzle(DIFFICULTY[difficulty])
+        settings = DIFFICULTY[difficulty]
+
+        self.puzzle, self.solution = make_puzzle(settings["clues"])
+
         self.given = [[self.puzzle[r][c] != 0 for c in range(9)] for r in range(9)]
         self.grid = [row[:] for row in self.puzzle]
         self.notes = [[set() for _ in range(9)] for _ in range(9)]
         self.selected = (0, 0)
         self.mistakes = 0
+        self.lives = settings["lives"]
+        self.hints = settings["hints"]
+
         self.seconds = 0
         self.won = False
+
         self.mist_lbl.config(text="\u2716 0")
+        self.lives_lbl.config(text=f"❤️ {self.lives}")
+        self.hints_lbl.config(text=f"✨ {self.hints}")
+
         if not self.timer_running:
             self.timer_running = True
             self._tick()
@@ -262,7 +296,18 @@ class CuteSudoku:
             self.notes[r][c].clear()
             if n != self.solution[r][c]:
                 self.mistakes += 1
+                self.lives -= 1
+
                 self.mist_lbl.config(text=f"\u2716 {self.mistakes}")
+                self.lives_lbl.config(text=f"❤️ {self.lives}")
+
+            if self.lives <= 0:
+                self.won = True
+                self.draw()
+                self._lose_banner()
+                return
+
+
 
         self.draw()
         self._check_win()
@@ -270,28 +315,40 @@ class CuteSudoku:
     def hint(self):
         if self.won:
             return
+
+        # No hints remaining
+        if self.hints <= 0:
+            return
+
         r, c = self.selected
+
         if self.given[r][c] or self.grid[r][c] == self.solution[r][c]:
-            # pick any empty/incorrect cell instead
-            empties = [(i, j) for i in range(9) for j in range(9)
-                       if not self.given[i][j] and self.grid[i][j] != self.solution[i][j]]
+
+            empties = [
+                (i, j)
+                for i in range(9)
+                for j in range(9)
+                if not self.given[i][j]
+                and self.grid[i][j] != self.solution[i][j]
+            ]
+
             if not empties:
                 return
+
             r, c = random.choice(empties)
             self.selected = (r, c)
+
+        # Use one hint
+        self.hints -= 1
+        self.hints_lbl.config(text=f"✨ {self.hints}")
+
         self.grid[r][c] = self.solution[r][c]
         self.notes[r][c].clear()
+
         self.draw()
         self._check_win()
 
-    def check(self):
-        """Flash any filled cells that disagree with the solution."""
-        self._flash = [(r, c) for r in range(9) for c in range(9)
-                       if self.grid[r][c] != 0 and not self.given[r][c]
-                       and self.grid[r][c] != self.solution[r][c]]
-        self.draw()
-        self.root.after(900, lambda: (setattr(self, "_flash", []), self.draw()))
-
+    
     def _conflicts(self):
         bad = set()
         for r in range(9):
@@ -373,6 +430,30 @@ class CuteSudoku:
         cv.create_text(self.board_px / 2, self.board_px / 2 + 20,
                        text=f"Time {m:02d}:{s:02d}   \u2022   Mistakes {self.mistakes}",
                        font=self.info_font, fill=USER_TXT)
+
+
+
+    def _lose_banner(self):
+        cv = self.canvas
+
+        cv.create_rectangle(0, self.board_px / 2 - 60,
+                            self.board_px, self.board_px / 2 + 60,
+                            fill="#ffffff", outline=BOX_LINE, width=3)
+
+        cv.create_text(
+            self.board_px / 2,
+            self.board_px / 2 - 18,
+            text="💔 Game Over",
+            font=self.title_font,
+            fill="#d36a9a")
+
+        cv.create_text(
+            self.board_px / 2,
+            self.board_px / 2 + 20,
+            text="No lives left • Press New to play again",
+            font=self.info_font,
+            fill=USER_TXT
+        )
 
 
 if __name__ == "__main__":
