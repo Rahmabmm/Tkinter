@@ -29,7 +29,7 @@ A collection of desktop GUI applications developed with Python, Tkinter and Pyga
 
 Python, Tkinter, Pygame
 
-📚 Purpose
+## 📚 Purpose
 
 This repository serves as a collection of my Python GUI projects, experiments, and educational applications developed while learning, practicing, and teaching programming
 
