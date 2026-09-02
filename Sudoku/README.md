@@ -55,7 +55,15 @@ Higher difficulty means fewer starting clues and fewer lives, making the puzzle 
 
 ## 📸 How to Play
 
-Here's a quick demonstration of the game:
+Complete the entire Sudoku grid correctly to win the game! 
+
+<p align="center">
+  <img src="win.gif" alt="Sudoku">
+</p>
+
+
+Be careful! Each incorrect answer costs you one life. When you run out of lives, the game is over.
+
 
 <p align="center">
   <img src="loose.gif" alt="Sudoku">
