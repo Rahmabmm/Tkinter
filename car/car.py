@@ -4,12 +4,21 @@ import random
 
 pygame.init()
 
+pygame.mixer.init()
+
+# Load and play background music
+pygame.mixer.music.load("car/images/Old Town Road.mp3")
+pygame.mixer.music.set_volume(0.5)  # Volume between 0.0 and 1.0
+pygame.mixer.music.play(-1)  # -1 means loop forever
+
+
 # Create the window
 width = 500
 height = 500
 screen_size = (width, height)
 screen = pygame.display.set_mode(screen_size)
-pygame.display.set_caption("Car Game")
+pygame.display.set_caption("Car Racing")
+
 
 # Colors
 gray = (100, 100, 100)
